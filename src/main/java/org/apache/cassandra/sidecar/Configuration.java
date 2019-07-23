@@ -53,12 +53,34 @@ public class Configuration
 
     private final boolean isSslEnabled;
 
+
+    /* Cassandra conf path*/
+    @Nullable
+    private String cassandraConfigPath;
+
+    @Nullable
+    String cdcKeySpace;
+
+    @Nullable
+    String cdcColumnFamily;
+
+    @Nullable
+    String cdcKafkaServer;
+
+    @Nullable
+    String cdcKafkaTopic;
+
     public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
                          Integer healthCheckFrequencyMillis, boolean isSslEnabled,
                          @Nullable String keyStorePath,
                          @Nullable String keyStorePassword,
                          @Nullable String trustStorePath,
-                         @Nullable String trustStorePassword)
+                         @Nullable String trustStorePassword,
+                         @Nullable String cassandraConfigPath,
+                         @Nullable String keySpace,
+                         @Nullable String columnFamily,
+                         @Nullable String kafkaServer,
+                         @Nullable String kafkaTopic)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
@@ -71,6 +93,13 @@ public class Configuration
         this.trustStorePath = trustStorePath;
         this.trustStorePassword = trustStorePassword;
         this.isSslEnabled = isSslEnabled;
+
+
+        this.cassandraConfigPath = cassandraConfigPath;
+        this.cdcKeySpace = keySpace;
+        this.cdcColumnFamily = columnFamily;
+        this.cdcKafkaServer= kafkaServer;
+        this.cdcKafkaTopic = kafkaTopic;
     }
 
     /**
@@ -178,6 +207,35 @@ public class Configuration
     }
 
     /**
+     * Gets the path of the Cassandra configuration file
+     * */
+    @Nullable
+    public String getCassandraConfigPath() {return cassandraConfigPath;}
+
+    /**
+     * Gets the keyspace of the column family
+    * */
+    @Nullable
+    public String getCdcKeySpace() { return cdcKeySpace; }
+
+    /**
+     * Gete the column family to extract change data/ commit logs.
+     * */
+    @Nullable
+    public String getCdcColumnFamily() { return cdcColumnFamily; }
+
+    /**
+     * Gets the Kafka server to publish change events
+     * */
+    @Nullable
+    public String getCdcKafkaServer() { return cdcKafkaServer; }
+
+    /**
+     * Gets the Kafka topic to publish changes
+     * */
+    @Nullable
+    public String getCdcKafkaTopic() { return cdcKafkaTopic; }
+    /**
      * Configuration Builder
      */
     public static class Builder
@@ -192,6 +250,11 @@ public class Configuration
         private String trustStorePath;
         private String trustStorePassword;
         private boolean isSslEnabled;
+        private String cassandraConfigPath;
+        private String cdcKeySpace;
+        private String cdcColumnFamily;
+        private String cdcKafkaServer;
+        private String cdcKafkaTopic;
 
         public Builder setCassandraHost(String host)
         {
@@ -253,10 +316,41 @@ public class Configuration
             return this;
         }
 
+        public Builder setCdcKeySpace(String cdcKeySpace)
+        {
+            this.cdcKeySpace = cdcKeySpace;
+            return  this;
+        }
+
+        public Builder setCdcColumnFamily(String cdcColumnFamily)
+        {
+            this.cdcColumnFamily = cdcColumnFamily;
+            return  this;
+        }
+
+        public Builder setCdcKafkaServer(String kafkaServer)
+        {
+            this.cdcKafkaServer = kafkaServer;
+            return  this;
+        }
+
+        public Builder setCdcKafkaTopic(String kafkaTopic)
+        {
+            this.cdcKafkaTopic = kafkaTopic;
+            return  this;
+        }
+
+        public Builder setCassandraConfigPath(String configPath)
+        {
+            this.cassandraConfigPath = configPath;
+            return  this;
+        }
+
         public Configuration build()
         {
             return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis, isSslEnabled,
-                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword);
+                                     keyStorePath, keyStorePassword, trustStorePath, trustStorePassword,
+                    cassandraConfigPath, cdcKeySpace, cdcColumnFamily, cdcKafkaServer, cdcKafkaTopic);
         }
     }
 }
