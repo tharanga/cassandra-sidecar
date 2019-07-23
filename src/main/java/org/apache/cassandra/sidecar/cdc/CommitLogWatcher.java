@@ -1,17 +1,25 @@
 package org.apache.cassandra.sidecar.cdc;
 
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.cassandra.db.commitlog.CommitLogPosition;
 import org.apache.cassandra.db.commitlog.CommitLogReader;
 import org.apache.cassandra.io.util.RandomAccessReader;
 import org.apache.cassandra.sidecar.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.nio.file.*;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 
+/**
+ * Watches CDC index and reads the commit log accordingly.
+ */
 public class CommitLogWatcher implements Runnable
 {
     private static final Logger logger = LoggerFactory.getLogger(CommitLogWatcher.class);
@@ -37,16 +45,20 @@ public class CommitLogWatcher implements Runnable
     @Override
     public void run()
     {
-        try {
+        try
+        {
             this.watcher = FileSystems.getDefault().newWatchService();
             this.key = dir.register(watcher, ENTRY_MODIFY);
-            while (true) {
+            while (true)
+            {
                 WatchKey aKey = watcher.take();
-                if (!key.equals(aKey)) {
+                if (!key.equals(aKey))
+                {
                     logger.error("WatchKey not recognized.");
                     continue;
                 }
-                for (WatchEvent<?> event : key.pollEvents()) {
+                for (WatchEvent<?> event : key.pollEvents())
+                {
                     WatchEvent.Kind<?> kind = event.kind();
                     WatchEvent<Path> ev = (WatchEvent<Path>) event;
                     Path relativePath = ev.context();
@@ -56,7 +68,8 @@ public class CommitLogWatcher implements Runnable
                 }
                 key.reset();
             }
-        } catch (Throwable throwable)
+        }
+        catch (Throwable throwable)
         {
             logger.error("Error when watching the CDC dir : {}", throwable.getMessage());
         }
@@ -69,24 +82,29 @@ public class CommitLogWatcher implements Runnable
         String spath = path.toString();
         spath = spath.substring(spath.lastIndexOf('/') + 1, spath.lastIndexOf('_')) + ".log";
         Path newPath = Paths.get(path.getParent() + "/" + spath); //"/commitlog/"
-        try {
+        try
+        {
             RandomAccessReader reader = RandomAccessReader.open(path.toFile());
             if (reader == null) return;
             int offset = Integer.parseInt(reader.readLine());
-            long segmentId = Long.parseLong(spath.substring(spath.lastIndexOf('-')+1, spath.lastIndexOf('.')));
+            long segmentId = Long.parseLong(spath.substring(spath.lastIndexOf('-') + 1, spath.lastIndexOf('.')));
             reader.close();
             // prevOffset = prevOffset >= offset ? 0 : prevOffset;
-            try {
-                if (oldPath != null && !oldPath.toString().equals(newPath.toString())) {
+            try
+            {
+                if (oldPath != null && !oldPath.toString().equals(newPath.toString()))
+                {
                     boolean suc = oldPath.toFile().delete();
                     logger.info("{} the old file {}", suc ? "Deleted" : "Could not delete", oldPath.toString());
                     prevOffset = 0;
                 }
-                if (oldIdxPath != null && !oldIdxPath.toString().equals(path.toString())) {
+                if (oldIdxPath != null && !oldIdxPath.toString().equals(path.toString()))
+                {
                     boolean suc = oldIdxPath.toFile().delete();
                     logger.info("{} the old CDC idx file {}", suc ? "Deleted" : "Could not delete", oldIdxPath);
                 }
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 logger.error("Error when deleting the old file {} : {}", oldPath.toString(), ex.getMessage());
             }
@@ -95,15 +113,19 @@ public class CommitLogWatcher implements Runnable
             oldIdxPath = path;
 
 
-                CommitLogPosition clp = new CommitLogPosition(segmentId, prevOffset);
-                commitLogReader.readCommitLogSegment(this.cdcReader, newPath.toFile(), clp, -1, false);
+            CommitLogPosition clp = new CommitLogPosition(segmentId, prevOffset);
+            commitLogReader.readCommitLogSegment(this.cdcReader, newPath.toFile(), clp, -1,
+                    false);
             prevOffset = offset;
-        } catch (RuntimeException ex) {
-            logger.error("Error when processing a commit log segment" + ex.getMessage());
-        } catch (Exception ex) {
+        }
+        catch (RuntimeException ex)
+        {
             logger.error("Error when processing a commit log segment" + ex.getMessage());
         }
-        logger.debug("Commitlog segment processed.");
+        catch (Exception ex)
+        {
+            logger.error("Error when processing a commit log segment" + ex.getMessage());
+        }
+        logger.debug("Commit log segment processed.");
     }
-
 }
