@@ -24,3 +24,10 @@ sidecar:
 
 healthcheck:
   - poll_freq_millis: 30000
+
+cdc:
+  - configPath: file:///etc/cassandra/cassandra.yaml
+  - keySpace: testspace
+  - columnFamily: testcf
+  - kafkaServer: kafka.test.net:7101
+  - kafkaTopic: cass_cdc
