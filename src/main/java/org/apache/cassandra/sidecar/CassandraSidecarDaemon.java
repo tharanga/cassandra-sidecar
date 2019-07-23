@@ -27,9 +27,9 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import io.vertx.core.http.HttpServer;
+import org.apache.cassandra.sidecar.cdc.CDCReaderService;
 import org.apache.cassandra.sidecar.routes.HealthService;
 import org.apache.cassandra.sidecar.utils.SslUtils;
-import org.apache.cassandra.sidecar.cdc.CDCReaderService;
 
 /**
  * Main class for initiating the Cassandra sidecar

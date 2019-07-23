@@ -59,16 +59,16 @@ public class Configuration
     private String cassandraConfigPath;
 
     @Nullable
-    String cdcKeySpace;
+    String keySpace;
 
     @Nullable
-    String cdcColumnFamily;
+    String columnFamily;
 
     @Nullable
-    String cdcKafkaServer;
+    String kafkaServer;
 
     @Nullable
-    String cdcKafkaTopic;
+    String kafkaTopic;
 
     public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
                          Integer healthCheckFrequencyMillis, boolean isSslEnabled,
@@ -96,10 +96,10 @@ public class Configuration
 
 
         this.cassandraConfigPath = cassandraConfigPath;
-        this.cdcKeySpace = keySpace;
-        this.cdcColumnFamily = columnFamily;
-        this.cdcKafkaServer= kafkaServer;
-        this.cdcKafkaTopic = kafkaTopic;
+        this.keySpace = keySpace;
+        this.columnFamily = columnFamily;
+        this.kafkaServer = kafkaServer;
+        this.kafkaTopic = kafkaTopic;
     }
 
     /**
@@ -207,34 +207,50 @@ public class Configuration
     }
 
     /**
-     * Gets the path of the Cassandra configuration file
-     * */
+     * Get path of the Cassandra configuration file
+     */
     @Nullable
-    public String getCassandraConfigPath() {return cassandraConfigPath;}
+    public String getCassandraConfigPath()
+    {
+        return cassandraConfigPath;
+    }
 
     /**
-     * Gets the keyspace of the column family
-    * */
+     * Get keyspace of the column family
+     */
     @Nullable
-    public String getCdcKeySpace() { return cdcKeySpace; }
+    public String getKeySpace()
+    {
+        return keySpace;
+    }
 
     /**
-     * Gete the column family to extract change data/ commit logs.
-     * */
+     * Get the column family to extract change data/ commit logs.
+     */
     @Nullable
-    public String getCdcColumnFamily() { return cdcColumnFamily; }
+    public String getColumnFamily()
+    {
+        return columnFamily;
+    }
 
     /**
-     * Gets the Kafka server to publish change events
-     * */
+     * Get Kafka server to publish change events
+     */
     @Nullable
-    public String getCdcKafkaServer() { return cdcKafkaServer; }
+    public String getKafkaServer()
+    {
+        return kafkaServer;
+    }
 
     /**
-     * Gets the Kafka topic to publish changes
-     * */
+     * Get Kafka topic to publish changes
+     */
     @Nullable
-    public String getCdcKafkaTopic() { return cdcKafkaTopic; }
+    public String getKafkaTopic()
+    {
+        return kafkaTopic;
+    }
+
     /**
      * Configuration Builder
      */
