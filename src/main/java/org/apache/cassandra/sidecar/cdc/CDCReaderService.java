@@ -24,7 +24,7 @@ public class CDCReaderService implements Host.StateListener
 {
     private static final Logger logger = LoggerFactory.getLogger(CDCReaderService.class);
     private Configuration conf;
-    private CommitLogWatcher commitLogWatcher;
+    private CDCIndexWatcher cdcIndexWatcher;
     private SSTableDumper ssTableDumper;
     private ExecutorService cdcWatcher;
 
@@ -65,10 +65,10 @@ public class CDCReaderService implements Host.StateListener
             }
 
             Schema.instance.load(keyspaceMetadata);
-            this.commitLogWatcher = new CommitLogWatcher(this.conf, DatabaseDescriptor.getCDCLogLocation());
+            this.cdcIndexWatcher = new CDCIndexWatcher(this.conf, DatabaseDescriptor.getCDCLogLocation());
             this.ssTableDumper = new SSTableDumper(this.conf);
             cdcWatcher = Executors.newSingleThreadExecutor();
-            cdcWatcher.submit(this.commitLogWatcher);
+            cdcWatcher.submit(this.cdcIndexWatcher);
             ssTableDumper.dump();
         }
         catch (Exception ex)

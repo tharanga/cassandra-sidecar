@@ -1,41 +1,41 @@
-package org.apache.cassandra.sidecar.cdc;
+package org.apache.cassandra.sidecar.cdc.output;
 
-import java.io.IOException;
+
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 import com.google.common.collect.Maps;
+
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.cassandra.db.Mutation;
-import org.apache.cassandra.db.commitlog.CommitLogDescriptor;
-import org.apache.cassandra.db.commitlog.CommitLogReadHandler;
 import org.apache.cassandra.db.partitions.PartitionUpdate;
 import org.apache.cassandra.sidecar.Configuration;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteBufferSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 
 /**
- * Reads mutations from the Cassandra commit logs.
+ * Emits Cassandra PartitionUpdates to a Kafka queue.
  */
-public class CDCReader implements CommitLogReadHandler
+public class KafkaOutput implements Output
 {
-    private Configuration conf;
-    private static final Logger logger = LoggerFactory.getLogger(CDCReader.class);
-    private  Producer<String, ByteBuffer> producer = null;
-    private String topic;
 
-    public CDCReader(Configuration conf)
+    private static final Logger logger = LoggerFactory.getLogger(KafkaOutput.class);
+    private Producer<String, ByteBuffer> producer;
+    private Configuration conf;
+    Future<RecordMetadata> future = null;
+
+    KafkaOutput(Configuration conf)
     {
         this.conf = conf;
-        this.topic = conf.getKafkaTopic();
         final Map<String, Object> producerConfig = Maps.newHashMap();
         producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteBufferSerializer.class.getName());
@@ -44,37 +44,12 @@ public class CDCReader implements CommitLogReadHandler
     }
 
     @Override
-    public boolean shouldSkipSegmentOnError(CommitLogReadException exception) throws IOException
-    {
-        return false;
-    }
-
-    @Override
-    public void handleUnrecoverableError(CommitLogReadException exception) throws IOException
-    {
-    }
-
-    @Override
-    public void handleMutation(Mutation mutation, int size, int entryLocation, CommitLogDescriptor desc)
-    {
-        if (mutation == null || !mutation.getKeyspaceName().equals(conf.getKeySpace()))
-        {
-            return;
-        }
-        logger.debug("Started handling a mutation of the keyspace : {}", mutation.getKeyspaceName());
-
-        for (PartitionUpdate partitionUpdate : mutation.getPartitionUpdates())
-        {
-            handlePartitionUpdate(partitionUpdate);
-        }
-    }
-
-    private  void handlePartitionUpdate(PartitionUpdate partition)
+    public void emitPartition(PartitionUpdate partition) throws Exception
     {
         //if (producer == null || partition == null || partition.metadata().cfName.equals(config.getColumnFamily())){
         if (producer == null || partition == null || !partition.metadata().name.equals(conf.getColumnFamily()))
         {
-            return;
+            throw new Exception("Kafka output is not properly configured");
         }
         logger.debug("Started handling a partition with the column family : {}", partition.metadata().name);
         try
@@ -83,13 +58,18 @@ public class CDCReader implements CommitLogReadHandler
             String partitionKey = partition.metadata().partitionKeyType.getSerializer()
                     .toCQLLiteral(partition.partitionKey().getKey());
             logger.debug("Producing a partition update with the key : {}",  partitionKey);
-            ProducerRecord<String, ByteBuffer> record = new ProducerRecord<>(this.topic, partitionKey,
+            ProducerRecord<String, ByteBuffer> record = new ProducerRecord<>(conf.getKafkaTopic(), partitionKey,
                     PartitionUpdate.toBytes(partition, 1));
-            this.producer.send(record);
+            if (future != null)
+            {
+                future.get();
+            }
+            future = this.producer.send(record);
         }
         catch (Exception ex)
         {
             logger.error("Error sending a message to the Kafka : {}" + ex.getMessage());
+            throw ex;
         }
     }
 }

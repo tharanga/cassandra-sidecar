@@ -26,8 +26,9 @@ healthcheck:
   - poll_freq_millis: 30000
 
 cdc:
-  - configPath: file:///etc/cassandra/cassandra.yaml
+  - configPath: file:///Users/tgamaethige/Dev/nfcassandra/conf/cassandra.yaml
   - keySpace: testspace
-  - columnFamily: testcf
-  - kafkaServer: kafka.test.net:7101
-  - kafkaTopic: cass_cdc
+  - columnFamily: movies
+  - kafkaServer: share.kafka.us-east-1.dyntest.netflix.net:7101
+  - kafkaTopic: cass_cdc_poc
+  - outputType: kafka
