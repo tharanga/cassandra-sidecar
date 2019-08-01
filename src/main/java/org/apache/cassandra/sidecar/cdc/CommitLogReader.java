@@ -1,81 +1,65 @@
 package org.apache.cassandra.sidecar.cdc;
 
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.db.commitlog.CommitLogPosition;
-import org.apache.cassandra.db.commitlog.CommitLogReader;
 import org.apache.cassandra.io.util.RandomAccessReader;
+
 import org.apache.cassandra.sidecar.Configuration;
 
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
-
 /**
- * Watches CDC index and reads the commit log accordingly.
+ * Reads a Cassandra commit log. Read offsets are provided by the CdcIndexWatcher
  */
-public class CommitLogWatcher implements Runnable
+public class CommitLogReader
 {
-    private static final Logger logger = LoggerFactory.getLogger(CommitLogWatcher.class);
-    private WatchService watcher;
-    private WatchKey key;
-    private Path dir;
+
+    private static final Logger logger = LoggerFactory.getLogger(CommitLogReader.class);
+    private ExecutorService executor;
+    private BlockingQueue<Path> blockingQueue;
     private int prevOffset = 0;
-    private CommitLogReader commitLogReader;
+    private org.apache.cassandra.db.commitlog.CommitLogReader commitLogReader;
     private Path oldPath = null;
     private Path oldIdxPath = null;
+    private MutationHandler mutationHandler;
 
-    private CDCReader cdcReader;
-    private Configuration conf;
 
-    CommitLogWatcher(Configuration conf, String cdcLogPath)
+    CommitLogReader(Configuration conf, BlockingQueue blockingQueue)
     {
-        this.dir = Paths.get(cdcLogPath);
-        this.conf = conf;
-        this.cdcReader = new CDCReader(conf);
-        this.commitLogReader =  new CommitLogReader();
+        this.executor = Executors.newSingleThreadExecutor(); //TODO: Single reader, can be multiple readers, but watch
+                                                        // for the commit log deletion process, it has to be changed.
+        this.blockingQueue = blockingQueue;
+        this.commitLogReader = new org.apache.cassandra.db.commitlog.CommitLogReader();
+        this.mutationHandler = new MutationHandler(conf);
     }
 
-    @Override
-    public void run()
+    public void start()
     {
-        try
+        executor.submit(() ->
         {
-            this.watcher = FileSystems.getDefault().newWatchService();
-            this.key = dir.register(watcher, ENTRY_MODIFY);
-            while (true)
+            try
             {
-                WatchKey aKey = watcher.take();
-                if (!key.equals(aKey))
+                while (true)
                 {
-                    logger.error("WatchKey not recognized.");
-                    continue;
+                    Path path = this.blockingQueue.take();
+                    processCDCWatchEvent(path);
                 }
-                for (WatchEvent<?> event : key.pollEvents())
-                {
-                    WatchEvent.Kind<?> kind = event.kind();
-                    WatchEvent<Path> ev = (WatchEvent<Path>) event;
-                    Path relativePath = ev.context();
-                    Path absolutePath = dir.resolve(relativePath);
-                    processCommitLogSegment(absolutePath);
-                    logger.debug("{}: {}", event.kind().name(), absolutePath);
-                }
-                key.reset();
             }
-        }
-        catch (Throwable throwable)
-        {
-            logger.error("Error when watching the CDC dir : {}", throwable.getMessage());
-        }
+            catch (InterruptedException e)
+            {
+                logger.error("Error handling the CDC watch event : {} ", e.getMessage());
+            }
+            return;
+        });
     }
 
-    private void processCommitLogSegment(Path path)
+    private void processCDCWatchEvent(Path path)
     {
         logger.debug("Processing a commitlog segment");
         if (!path.toString().endsWith(".idx")) return;
@@ -114,18 +98,15 @@ public class CommitLogWatcher implements Runnable
 
 
             CommitLogPosition clp = new CommitLogPosition(segmentId, prevOffset);
-            commitLogReader.readCommitLogSegment(this.cdcReader, newPath.toFile(), clp, -1,
+            commitLogReader.readCommitLogSegment(this.mutationHandler, newPath.toFile(), clp, -1,
                     false);
             prevOffset = offset;
         }
-        catch (RuntimeException ex)
-        {
-            logger.error("Error when processing a commit log segment" + ex.getMessage());
-        }
         catch (Exception ex)
         {
-            logger.error("Error when processing a commit log segment" + ex.getMessage());
+            logger.error("Error when processing a commit log segment : {}", ex.getMessage());
         }
         logger.debug("Commit log segment processed.");
+
     }
 }

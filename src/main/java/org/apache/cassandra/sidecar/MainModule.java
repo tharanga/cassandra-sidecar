@@ -131,6 +131,7 @@ public class MainModule extends AbstractModule
                     .setCdcColumnFamily(yamlConf.get(String.class, "cdc.columnFamily"))
                     .setCdcKafkaServer(yamlConf.get(String.class, "cdc.kafkaServer"))
                     .setCdcKafkaTopic(yamlConf.get(String.class, "cdc.kafkaTopic"))
+                    .setCdcOutputType(yamlConf.get(String.class, "cdc.outputType"))
                     .build();
         }
         catch (MalformedURLException e)

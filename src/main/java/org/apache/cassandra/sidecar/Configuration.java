@@ -70,6 +70,8 @@ public class Configuration
     @Nullable
     String kafkaTopic;
 
+    String outputType;
+
     public Configuration(String cassandraHost, Integer cassandraPort, String host, Integer port,
                          Integer healthCheckFrequencyMillis, boolean isSslEnabled,
                          @Nullable String keyStorePath,
@@ -80,7 +82,8 @@ public class Configuration
                          @Nullable String keySpace,
                          @Nullable String columnFamily,
                          @Nullable String kafkaServer,
-                         @Nullable String kafkaTopic)
+                         @Nullable String kafkaTopic,
+                         String outputType)
     {
         this.cassandraHost = cassandraHost;
         this.cassandraPort = cassandraPort;
@@ -100,6 +103,7 @@ public class Configuration
         this.columnFamily = columnFamily;
         this.kafkaServer = kafkaServer;
         this.kafkaTopic = kafkaTopic;
+        this.outputType = outputType;
     }
 
     /**
@@ -252,6 +256,15 @@ public class Configuration
     }
 
     /**
+     * Get the concrete output type
+     */
+    public String getOutputType()
+    {
+        return outputType;
+    }
+
+
+    /**
      * Configuration Builder
      */
     public static class Builder
@@ -271,6 +284,7 @@ public class Configuration
         private String cdcColumnFamily;
         private String cdcKafkaServer;
         private String cdcKafkaTopic;
+        private String cdcOutputType;
 
         public Builder setCassandraHost(String host)
         {
@@ -362,11 +376,17 @@ public class Configuration
             return  this;
         }
 
+        public Builder setCdcOutputType(String outputType)
+        {
+            this.cdcOutputType = outputType;
+            return this;
+        }
+
         public Configuration build()
         {
             return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis, isSslEnabled,
                                      keyStorePath, keyStorePassword, trustStorePath, trustStorePassword,
-                    cassandraConfigPath, cdcKeySpace, cdcColumnFamily, cdcKafkaServer, cdcKafkaTopic);
+                    cassandraConfigPath, cdcKeySpace, cdcColumnFamily, cdcKafkaServer, cdcKafkaTopic, cdcOutputType);
         }
     }
 }

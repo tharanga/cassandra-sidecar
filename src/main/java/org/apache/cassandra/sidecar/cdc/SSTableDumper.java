@@ -1,10 +1,7 @@
 package org.apache.cassandra.sidecar.cdc;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
-
-import com.google.common.collect.Maps;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,12 +17,10 @@ import org.apache.cassandra.io.sstable.Descriptor;
 import org.apache.cassandra.io.sstable.format.SSTableReader;
 import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.sidecar.Configuration;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.ByteBufferSerializer;
-import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.cassandra.sidecar.cdc.output.Output;
+import org.apache.cassandra.sidecar.cdc.output.OutputFactory;
+
+
 
 
 /**
@@ -37,31 +32,32 @@ public class SSTableDumper
     private Configuration conf;
     private String keySpace;
     private String columnFamily;
-    private String topic;
-    private  Producer<String, ByteBuffer> producer;
+    private Output producer;
 
     SSTableDumper(Configuration conf)
     {
         this.conf = conf;
         this.keySpace = conf.getKeySpace();
         this.columnFamily = conf.getColumnFamily();
-        this.topic = conf.getKafkaTopic();
-        final Map<String, Object> producerConfig = Maps.newHashMap();
-        producerConfig.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        producerConfig.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteBufferSerializer.class.getName());
-        producerConfig.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, conf.getKafkaServer());
-        producer = new KafkaProducer<>(producerConfig);
+        producer = OutputFactory.getOutput(conf);
     }
 
     public void dump()
     {
         //if (Schema.instance.getCFMetaData(keySpace, columnFamily) == null) {
+        if (producer == null)
+        {
+            logger.error("Output producer is not properly initiated");
+            return;
+        }
         if (Schema.instance.getTableMetadata(keySpace, columnFamily) == null)
         {
             logger.error("Unknown keySpace/columnFamily {}.{}. No data to dump", keySpace, columnFamily);
             return;
         }
-
+        // TODO: SSTables have index and data files. Index file has partition keys with offsets to the data file. We
+        // can save a LOT of CPU cycles by not de-serializing PartitionUpdate objects. Instead we can read byte offsets
+        // and send them directly to the Kafka.
         Keyspace ks = Keyspace.openWithoutSSTables(keySpace);
         ColumnFamilyStore cfs = ks.getColumnFamilyStore(columnFamily);
         Directories.SSTableLister lister = cfs.getDirectories().sstableLister(null).skipTemporary(true);
@@ -81,14 +77,7 @@ public class SSTableDumper
                         {
                             PartitionUpdate partition = PartitionUpdate.fromIterator(ufp.next(),
                                     ColumnFilter.all(ufp.metadata()));
-                            String partitionKey = partition.metadata().partitionKeyType.getSerializer()
-                                    .toCQLLiteral(partition.partitionKey().getKey());
-                            //String partitionKey = partition.metadata().getKeyValidator()
-                            // .getString(partition.partitionKey().getKey());
-                            logger.debug("Dumping a partition update with the key : {}",  partitionKey);
-                            ProducerRecord<String, ByteBuffer> record = new ProducerRecord<>(this.topic, partitionKey,
-                                    PartitionUpdate.toBytes(partition, 1));
-                            producer.send(record);
+                            producer.emitPartition(partition);
                         }
                         ufp.close();
                     }
