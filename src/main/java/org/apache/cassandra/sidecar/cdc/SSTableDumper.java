@@ -44,6 +44,7 @@ public class SSTableDumper
 
     public void dump()
     {
+        // TODO: Flush data before starting the data dump
         //if (Schema.instance.getCFMetaData(keySpace, columnFamily) == null) {
         if (producer == null)
         {

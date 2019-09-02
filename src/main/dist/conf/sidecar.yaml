@@ -29,6 +29,6 @@ cdc:
   - configPath: file:///Users/tgamaethige/Dev/nfcassandra/conf/cassandra.yaml
   - keySpace: testspace
   - columnFamily: movies
-  - kafkaServer: share.kafka.us-east-1.dyntest.netflix.net:7101
-  - kafkaTopic: cass_cdc_poc
+  - kafkaServer: kvmkafka_default-deltadev-zone1.cluster.us-east-1.test.cloud.netflix.net:7101
+  - kafkaTopic: deltaconnector_cassandra_dev_in
   - outputType: kafka

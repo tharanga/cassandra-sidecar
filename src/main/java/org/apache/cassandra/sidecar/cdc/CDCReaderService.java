@@ -18,7 +18,7 @@ import org.apache.cassandra.sidecar.Configuration;
 
 
 /**
- * Captures changes from from Cassandra commit logs dumps data from SSTables.
+ * Cassandra's real-time change data capture service.
  */
 public class CDCReaderService implements Host.StateListener
 {
