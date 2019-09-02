@@ -32,8 +32,7 @@ public class MutationHandler implements CommitLogReadHandler
     {
         this.conf = conf;
         output = OutputFactory.getOutput(conf);
-        executor = Executors.newSingleThreadExecutor(); // TODO: Multiple threads can process Mutations in parallel, but
-                            // bookmark process has to accommodate that.
+        executor = Executors.newSingleThreadExecutor();
     }
 
     @Override
@@ -63,7 +62,9 @@ public class MutationHandler implements CommitLogReadHandler
         logger.debug("Started handling a mutation of the keyspace : {} at offset {}", mutation.getKeyspaceName(),
                 entryLocation);
 
-        // p
+        // Pipeline Mutation reading and de-serializing with sending to the output.
+        //TODO: Multiple threads can process Mutations in parallel; hence use a thread pool. Be careful to design
+        // bookmarks and commit log deletion to work with multiple threads.
         if (mutationFuture != null)
         {
             try
