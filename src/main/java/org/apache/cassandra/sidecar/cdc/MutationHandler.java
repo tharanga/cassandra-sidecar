@@ -103,4 +103,9 @@ public class MutationHandler implements CommitLogReadHandler
             return offset;
         });
     }
+
+    public void stop()
+    {
+        this.executor.shutdown();
+    }
 }

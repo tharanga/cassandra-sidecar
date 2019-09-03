@@ -28,6 +28,7 @@ public class CommitLogReader
     private Path oldPath = null;
     private Path oldIdxPath = null;
     private MutationHandler mutationHandler;
+    private boolean running;
 
 
     CommitLogReader(Configuration conf, BlockingQueue blockingQueue)
@@ -37,6 +38,7 @@ public class CommitLogReader
         this.blockingQueue = blockingQueue;
         this.commitLogReader = new org.apache.cassandra.db.commitlog.CommitLogReader();
         this.mutationHandler = new MutationHandler(conf);
+        this.running = true;
     }
 
     public void start()
@@ -45,7 +47,7 @@ public class CommitLogReader
         {
             try
             {
-                while (true)
+                while (this.running)
                 {
                     Path path = this.blockingQueue.take();
                     processCDCWatchEvent(path);
@@ -108,5 +110,12 @@ public class CommitLogReader
         }
         logger.debug("Commit log segment processed.");
 
+    }
+
+    public void stop()
+    {
+        this.running = false;
+        this.executor.shutdown();
+        this.mutationHandler.stop();
     }
 }

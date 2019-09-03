@@ -44,12 +44,13 @@ public class CassandraSidecarDaemon
     private final CDCReaderService cdcReaderService;
 
     @Inject
-    public CassandraSidecarDaemon(HealthService healthService, HttpServer server, Configuration config)
+    public CassandraSidecarDaemon(HealthService healthService, HttpServer server, Configuration config,
+                                  CDCReaderService cdcReaderService)
     {
         this.healthService = healthService;
         this.server = server;
         this.config = config;
-        this.cdcReaderService = new CDCReaderService(config);
+        this.cdcReaderService = cdcReaderService;
     }
 
     public void start()
@@ -65,6 +66,7 @@ public class CassandraSidecarDaemon
     public void stop()
     {
         logger.info("Stopping Cassandra Sidecar");
+        cdcReaderService.stop();
         healthService.stop();
         server.close();
     }
