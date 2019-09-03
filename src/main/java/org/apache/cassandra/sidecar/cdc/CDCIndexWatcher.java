@@ -29,6 +29,7 @@ public class CDCIndexWatcher implements Runnable
     private Configuration conf;
     private org.apache.cassandra.sidecar.cdc.CommitLogReader commitLogReader;
     private BlockingQueue<Path> blockingQueue;
+    private boolean running;
 
     CDCIndexWatcher(Configuration conf, String cdcLogPath)
     {
@@ -36,6 +37,7 @@ public class CDCIndexWatcher implements Runnable
         this.conf = conf;
         this.blockingQueue = new LinkedBlockingDeque<>(); //TODO : currently this is unbounded, bound it and add alerts.
         this.commitLogReader = new CommitLogReader(conf, this.blockingQueue);
+        this.running = true;
     }
 
     @Override
@@ -46,7 +48,7 @@ public class CDCIndexWatcher implements Runnable
             this.commitLogReader.start();
             this.watcher = FileSystems.getDefault().newWatchService();
             this.key = dir.register(watcher, ENTRY_MODIFY);
-            while (true)
+            while (running)
             {
                 WatchKey aKey = watcher.take();
                 if (!key.equals(aKey))
@@ -70,5 +72,11 @@ public class CDCIndexWatcher implements Runnable
         {
             logger.error("Error when watching the CDC dir : {}", throwable.getMessage());
         }
+    }
+
+    public void stop()
+    {
+        running = false;
+        this.commitLogReader.stop();
     }
 }
