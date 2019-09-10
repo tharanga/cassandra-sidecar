@@ -50,12 +50,10 @@ public class MutationHandler implements CommitLogReadHandler
     public void handleMutation(Mutation mutation, int size, int entryLocation, CommitLogDescriptor desc)
     {
 
-        if (mutation == null || !mutation.trackedByCDC() || !mutation.getKeyspaceName().equals(conf.getKeySpace()))
+        if (mutation == null || !mutation.trackedByCDC())
         {
             return;
         }
-
-        String keySpace = mutation.getKeyspaceName();
 
         if (output == null)
         {
@@ -88,12 +86,6 @@ public class MutationHandler implements CommitLogReadHandler
             int offset = entryLocation;
             for (PartitionUpdate partitionUpdate : mutation.getPartitionUpdates())
             {
-                if (!keySpace.equals(conf.getKeySpace()) ||
-                        !partitionUpdate.metadata().name.equals(conf.getColumnFamily()))
-                {
-                    continue;
-                }
-
                 Boolean retry = true;
                 try
                 {

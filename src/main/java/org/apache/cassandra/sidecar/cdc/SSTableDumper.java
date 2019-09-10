@@ -34,11 +34,11 @@ public class SSTableDumper
     private String columnFamily;
     private Output producer;
 
-    SSTableDumper(Configuration conf)
+    SSTableDumper(Configuration conf, String keySpace, String columnFamily)
     {
         this.conf = conf;
-        this.keySpace = conf.getKeySpace();
-        this.columnFamily = conf.getColumnFamily();
+        this.keySpace = keySpace;
+        this.columnFamily = columnFamily;
         producer = OutputFactory.getOutput(conf);
     }
 

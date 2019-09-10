@@ -26,9 +26,7 @@ healthcheck:
   - poll_freq_millis: 30000
 
 cdc:
-  - configPath: file:///Users/tgamaethige/Dev/nfcassandra/conf/cassandra.yaml
-  - keySpace: testspace
-  - columnFamily: movies
-  - kafkaServer: kvmkafka_default-deltadev-zone1.cluster.us-east-1.test.cloud.netflix.net:7101
-  - kafkaTopic: deltaconnector_cassandra_dev_in
+  - configPath: file:///path/to/cassandra/conf/cassandra.yaml
+  - kafkaServer: kafka_default.net:7101
+  - kafkaTopic: cassandra_in
   - outputType: kafka

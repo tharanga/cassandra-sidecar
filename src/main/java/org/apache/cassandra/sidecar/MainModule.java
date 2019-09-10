@@ -127,8 +127,6 @@ public class MainModule extends AbstractModule
                     .setTrustStorePassword(yamlConf.get(String.class, "sidecar.ssl.truststore.password", null))
                     .setSslEnabled(yamlConf.get(Boolean.class, "sidecar.ssl.enabled", false))
                     .setCassandraConfigPath(yamlConf.get(String.class, "cdc.configPath"))
-                    .setCdcKeySpace(yamlConf.get(String.class, "cdc.keySpace"))
-                    .setCdcColumnFamily(yamlConf.get(String.class, "cdc.columnFamily"))
                     .setCdcKafkaServer(yamlConf.get(String.class, "cdc.kafkaServer"))
                     .setCdcKafkaTopic(yamlConf.get(String.class, "cdc.kafkaTopic"))
                     .setCdcOutputType(yamlConf.get(String.class, "cdc.outputType"))
