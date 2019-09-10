@@ -12,7 +12,7 @@ public class OutputFactory
         switch (conf.getOutputType())
         {
             case "kafka": return new KafkaOutput(conf);
-            case "null": return new NullOutput();
+            case "console": return new ConsoleOutput();
             default: return null;
         }
     }

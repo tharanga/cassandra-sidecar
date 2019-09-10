@@ -53,9 +53,10 @@ public class CDCReaderService implements Host.StateListener
                 throw new ConfigurationException("Configuration is not set for the CDC reader");
             }
 
+            System.setProperty("cassandra.config", conf.getCassandraConfigPath());
+
             if (!DatabaseDescriptor.isToolInitialized())
             {
-                System.setProperty("cassandra.config", conf.getCassandraConfigPath());
                 DatabaseDescriptor.toolInitialization();
                 Schema.instance.loadFromDisk(false);
             }
@@ -80,7 +81,6 @@ public class CDCReaderService implements Host.StateListener
                 return;
             }
 
-            Schema.instance.load(keyspaceMetadata);
             this.cdcIndexWatcher = new CDCIndexWatcher(this.conf, DatabaseDescriptor.getCDCLogLocation());
             this.ssTableDumper = new SSTableDumper(this.conf);
             cdcWatcher = Executors.newSingleThreadExecutor();
