@@ -47,10 +47,16 @@ public class KafkaOutput implements Output
     public void emitPartition(PartitionUpdate partition) throws Exception
     {
         //if (producer == null || partition == null || partition.metadata().cfName.equals(config.getColumnFamily())){
-        if (producer == null || partition == null || !partition.metadata().name.equals(conf.getColumnFamily()))
+        if (producer == null)
         {
             throw new Exception("Kafka output is not properly configured");
         }
+
+        if (partition == null)
+        {
+            return;
+        }
+
         logger.debug("Started handling a partition with the column family : {}", partition.metadata().name);
         try
         {
