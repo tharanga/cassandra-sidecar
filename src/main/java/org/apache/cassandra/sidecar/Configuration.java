@@ -59,12 +59,6 @@ public class Configuration
     private String cassandraConfigPath;
 
     @Nullable
-    String keySpace;
-
-    @Nullable
-    String columnFamily;
-
-    @Nullable
     String kafkaServer;
 
     @Nullable
@@ -79,8 +73,6 @@ public class Configuration
                          @Nullable String trustStorePath,
                          @Nullable String trustStorePassword,
                          @Nullable String cassandraConfigPath,
-                         @Nullable String keySpace,
-                         @Nullable String columnFamily,
                          @Nullable String kafkaServer,
                          @Nullable String kafkaTopic,
                          String outputType)
@@ -99,8 +91,6 @@ public class Configuration
 
 
         this.cassandraConfigPath = cassandraConfigPath;
-        this.keySpace = keySpace;
-        this.columnFamily = columnFamily;
         this.kafkaServer = kafkaServer;
         this.kafkaTopic = kafkaTopic;
         this.outputType = outputType;
@@ -220,24 +210,6 @@ public class Configuration
     }
 
     /**
-     * Get keyspace of the column family
-     */
-    @Nullable
-    public String getKeySpace()
-    {
-        return keySpace;
-    }
-
-    /**
-     * Get the column family to extract change data/ commit logs.
-     */
-    @Nullable
-    public String getColumnFamily()
-    {
-        return columnFamily;
-    }
-
-    /**
      * Get Kafka server to publish change events
      */
     @Nullable
@@ -280,8 +252,6 @@ public class Configuration
         private String trustStorePassword;
         private boolean isSslEnabled;
         private String cassandraConfigPath;
-        private String cdcKeySpace;
-        private String cdcColumnFamily;
         private String cdcKafkaServer;
         private String cdcKafkaTopic;
         private String cdcOutputType;
@@ -346,18 +316,6 @@ public class Configuration
             return this;
         }
 
-        public Builder setCdcKeySpace(String cdcKeySpace)
-        {
-            this.cdcKeySpace = cdcKeySpace;
-            return  this;
-        }
-
-        public Builder setCdcColumnFamily(String cdcColumnFamily)
-        {
-            this.cdcColumnFamily = cdcColumnFamily;
-            return  this;
-        }
-
         public Builder setCdcKafkaServer(String kafkaServer)
         {
             this.cdcKafkaServer = kafkaServer;
@@ -386,7 +344,7 @@ public class Configuration
         {
             return new Configuration(cassandraHost, cassandraPort, host, port, healthCheckFrequencyMillis, isSslEnabled,
                                      keyStorePath, keyStorePassword, trustStorePath, trustStorePassword,
-                    cassandraConfigPath, cdcKeySpace, cdcColumnFamily, cdcKafkaServer, cdcKafkaTopic, cdcOutputType);
+                    cassandraConfigPath, cdcKafkaServer, cdcKafkaTopic, cdcOutputType);
         }
     }
 }

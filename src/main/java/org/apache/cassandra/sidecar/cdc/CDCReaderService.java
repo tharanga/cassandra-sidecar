@@ -1,22 +1,19 @@
 package org.apache.cassandra.sidecar.cdc;
 
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.annotation.Nullable;
 import javax.inject.Singleton;
 import javax.naming.ConfigurationException;
-
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.google.inject.Inject;
-
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.schema.KeyspaceMetadata;
 import org.apache.cassandra.schema.Schema;
+import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.sidecar.CQLSession;
 import org.apache.cassandra.sidecar.Configuration;
 
@@ -67,25 +64,29 @@ public class CDCReaderService implements Host.StateListener
                 return;
             }
 
-            KeyspaceMetadata keyspaceMetadata = Schema.instance.getKeyspaceMetadata(conf.getKeySpace());
-            if (keyspaceMetadata == null)
-            {
-                logger.error("Keyspace {} is not found", conf.getKeySpace());
-                return;
-            }
-
-            if (keyspaceMetadata.tables.get(conf.getColumnFamily()) == null)
-            {
-                logger.error("Column family {} is not found under the Keyspace {}", conf.getColumnFamily(),
-                        conf.getKeySpace());
-                return;
-            }
-
+            // Start reading the current commit log.
             this.cdcIndexWatcher = new CDCIndexWatcher(this.conf, DatabaseDescriptor.getCDCLogLocation());
-            this.ssTableDumper = new SSTableDumper(this.conf);
             cdcWatcher = Executors.newSingleThreadExecutor();
             cdcWatcher.submit(this.cdcIndexWatcher);
-            ssTableDumper.dump();
+
+            // Take a snapshot from existing CDC enabled tables.
+            for (String keySpace : Schema.instance.getKeyspaces())
+            {
+                KeyspaceMetadata keyspaceMetadata = Schema.instance.getKeyspaceMetadata(keySpace);
+                if (keyspaceMetadata == null)
+                {
+                    return;
+                }
+                for (TableMetadata tableMetadata : keyspaceMetadata.tablesAndViews())
+                {
+                    if (!tableMetadata.params.cdc)
+                    {
+                        continue;
+                    }
+                    this.ssTableDumper = new SSTableDumper(this.conf, tableMetadata.keyspace, tableMetadata.name);
+                    ssTableDumper.dump();
+                }
+            }
         }
         catch (Exception ex)
         {
