@@ -2,21 +2,21 @@ package org.apache.cassandra.sidecar.cdc;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import javax.annotation.Nullable;
 import javax.inject.Singleton;
 import javax.naming.ConfigurationException;
+
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Host;
 import com.google.inject.Inject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.schema.KeyspaceMetadata;
 import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.sidecar.CQLSession;
 import org.apache.cassandra.sidecar.Configuration;
-
 
 
 /**
@@ -30,15 +30,18 @@ public class CDCReaderService implements Host.StateListener
     private CDCIndexWatcher cdcIndexWatcher;
     private SSTableDumper ssTableDumper;
     private ExecutorService cdcWatcher;
+    private CDCSchemaChangeListener cdcSchemaChangeListener;
 
-    @Nullable
     private final CQLSession session;
 
     @Inject
-    public CDCReaderService(Configuration config, @Nullable CQLSession session)
+    public CDCReaderService(Configuration config, CQLSession session,
+                            CDCSchemaChangeListener schemaChangeListener)
     {
         this.conf = config;
         this.session = session;
+        this.cdcSchemaChangeListener = schemaChangeListener;
+        this.session.getLocalCql().getCluster().register(this.cdcSchemaChangeListener);
     }
 
     public synchronized void start()
