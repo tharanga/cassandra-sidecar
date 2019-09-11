@@ -63,9 +63,10 @@ public class SSTableDumper
             // byte offsets and send them directly to the Kafka.
             Keyspace ks = Keyspace.open(keySpace);
             cfs = ks.getColumnFamilyStore(columnFamily);
-            Set<SSTableReader> sstables = cfs.snapshot(snapshotName, true);
+            ColumnFamilyStore.loadNewSSTables(keySpace, columnFamily);
+            Set<SSTableReader> SSTables = cfs.snapshot(snapshotName, true);
 
-            for (SSTableReader reader : sstables)
+            for (SSTableReader reader : SSTables)
             {
                 if (reader != null)
                 {
