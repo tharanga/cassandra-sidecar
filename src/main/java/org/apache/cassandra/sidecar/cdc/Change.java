@@ -4,47 +4,51 @@ import java.nio.ByteBuffer;
 import org.apache.cassandra.db.partitions.PartitionUpdate;
 
 /**
- * Enum representing the payload type of a Change
+ * Enum representing the payload payloadType of a Change
  */
 enum PayloadType
 {
-    PARTITION_UPDATE((short) 0),
-    MUTATION((short) 1),
-    URI((short) 2);
+    PARTITION_UPDATE((byte) 0),
+    MUTATION((byte) 1),
+    URI((byte) 2);
 
-    private short value;
+    private byte value;
 
-    PayloadType(short value)
+    PayloadType(byte value)
     {
         this.value = value;
     }
 
-    public short getValue()
+    public byte getValue()
     {
         return this.value;
     }
 }
 
 /*
-   _________________________________________________________________
-    |           |           |           |                           |
-    |   Type    |   Version |   Flags   |   Serialized Payload bytes|
-    | (2 bytes) | (4 bytes) | (2 bytes) |     (variable length)     |
-    |___________|___________|___________|___________________________|
+    _______________________________________________________________________________
+    |  Envelope   | Payload   | Payload    |           |                           |
+    |  Version    |  Type     |   Version  |   Flags   |   Serialized Payload bytes|
+    | (1 byte)    | (1 byte)  | (1 byte)   |  (1 byte) |    (variable length)      |
+    |_____________|___________|____________|___________|___________________________|
 
-Type
-====
+Envelope Version
+================
+Version of the envelope, changes with structural changes to the envelope.
+
+Payload Type
+============
 The type of the payload. Defined in the PayloadType enum. Example
-content types are PartitionUpdate, Mutation, and URI. (short integer)
+types are PartitionUpdate, Mutation, and URI.
 
-Version
-=======
-Some payloads (e.g. PartitionUpdate) need a version for de-serializing .(integer)
+Payload Version
+===============
+Some payloads (e.g. PartitionUpdate) need a version for de-serializing.
 
 Flags
 =====
 Any custom flags that depends on the use case. E.g. someone can use these to differentiate
-between snapshot and change events. (short integer)
+between snapshot and change events.
 
 Serialized Payload
 =====================
@@ -58,27 +62,34 @@ Serialized payload. This is just a byte array.
  * */
 public class Change
 {
-    static final short CHANGE_EVENT = 0;
-    static final short REFRESH_EVENT = 1;
-    static final int HEADER_SIZE = 8;
-    private short type;
+    static final byte CHANGE_EVENT = 0;
+    static final byte REFRESH_EVENT = 1;
+    // Envelop version, update with envelop changes.
+    static final byte ENVELOPE_VERSION = 1;
+    // Side of the header, envelopeVersion + payloadType + payloadVersion + flags
+    static final int HEADER_SIZE = 4;
 
-    private int version;
+    private byte envelopeVersion;
 
-    private short flags;
+    private byte payloadType;
+
+    private byte payloadVersion;
+
+    private byte flags;
 
     private byte[] payload;
 
     private String partitionKey;
 
 
-
-    public Change(PayloadType type, int version, short flags, PartitionUpdate partitionUpdate)
+    public Change(PayloadType payloadType, int version, byte flags, PartitionUpdate partitionUpdate)
     {
-        this.type = type.getValue();
-        this.version = version;
+        this.envelopeVersion = Change.ENVELOPE_VERSION;
+        this.payloadType = payloadType.getValue();
+        this.payloadVersion = (byte) version;
+        assert ((int) this.payloadVersion) == version;
         this.flags = flags;
-        this.payload = PartitionUpdate.toBytes(partitionUpdate, this.version).array();
+        this.payload = PartitionUpdate.toBytes(partitionUpdate, this.payloadVersion).array();
         this.partitionKey = partitionUpdate.metadata().partitionKeyType.getSerializer()
                 .toCQLLiteral(partitionUpdate.partitionKey().getKey());
     }
@@ -86,9 +97,11 @@ public class Change
     public Change(byte[] serializedChange)
     {
         ByteBuffer buff = ByteBuffer.wrap(serializedChange);
-        this.type = buff.getShort(0);
-        this.version = buff.getInt(2);
-        this.flags = buff.getShort(6);
+        this.envelopeVersion = buff.get(0);
+        assert this.envelopeVersion == Change.ENVELOPE_VERSION;
+        this.payloadType = buff.get(1);
+        this.payloadVersion = buff.get(2);
+        this.flags = buff.get(3);
         this.payload = new byte[serializedChange.length - Change.HEADER_SIZE];
         buff.position(Change.HEADER_SIZE);
         buff.get(this.payload, 0, this.payload.length);
@@ -98,20 +111,22 @@ public class Change
     {
         // We don't need to serialize the partition key
         ByteBuffer dob = ByteBuffer.allocate(Change.HEADER_SIZE + this.payload.length);
-        dob.putShort(this.type);
-        dob.putInt(this.version);
-        dob.putShort(this.flags);
+        dob.put(this.envelopeVersion);
+        dob.put(this.payloadType);
+        dob.put(this.payloadVersion);
+        dob.put(this.flags);
         dob.put(this.payload);
         return dob.array();
     }
 
     public PartitionUpdate getPartitionUpdateObject() throws Exception
     {
-        if (this.payload == null || this.type != PayloadType.PARTITION_UPDATE.getValue())
+        if (this.payload == null || this.payloadType != PayloadType.PARTITION_UPDATE.getValue())
         {
-            throw new Exception("Invalid Payload type");
+            throw new Exception(String.format("Invalid payloadType (%d), expected (%d)", this.payloadType,
+                    PayloadType.PARTITION_UPDATE.getValue()));
         }
-        return PartitionUpdate.fromBytes(ByteBuffer.wrap(this.payload), this.version);
+        return PartitionUpdate.fromBytes(ByteBuffer.wrap(this.payload), (int) this.payloadVersion);
     }
 
     public String getPartitionKey()
