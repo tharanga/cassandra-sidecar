@@ -133,4 +133,9 @@ public class Change
     {
         return this.partitionKey;
     }
+
+    public int getPayloadVersion()
+    {
+        return (int) this.payloadVersion;
+    }
 }
