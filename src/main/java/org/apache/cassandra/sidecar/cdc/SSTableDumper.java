@@ -10,14 +10,11 @@ import org.apache.cassandra.db.filter.ColumnFilter;
 import org.apache.cassandra.db.partitions.PartitionUpdate;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterator;
 import org.apache.cassandra.io.sstable.format.SSTableReader;
+import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.cdc.output.Output;
 import org.apache.cassandra.sidecar.cdc.output.OutputFactory;
-
-
-
-
 
 /**
  * Reads data from SSTables
@@ -62,11 +59,13 @@ public class SSTableDumper
             // can save a LOT of CPU cycles by not de-serializing PartitionUpdate objects. Instead we can read
             // byte offsets and send them directly to the Kafka.
             Keyspace ks = Keyspace.open(keySpace);
+            // TODO: Don't use the column store. Adding and removing to/from the cf conflicts with the server.
             cfs = ks.getColumnFamilyStore(columnFamily);
+            // TODO: Flush before dump.
             ColumnFamilyStore.loadNewSSTables(keySpace, columnFamily);
-            Set<SSTableReader> SSTables = cfs.snapshot(snapshotName, true);
+            Set<SSTableReader> ssTables = cfs.snapshot(snapshotName, true);
 
-            for (SSTableReader reader : SSTables)
+            for (SSTableReader reader : ssTables)
             {
                 if (reader != null)
                 {
@@ -75,7 +74,8 @@ public class SSTableDumper
                     {
                         PartitionUpdate partition = PartitionUpdate.fromIterator(ufp.next(),
                                 ColumnFilter.all(ufp.metadata()));
-                        producer.emitPartition(partition);
+                        producer.emitChange(new Change(PayloadType.PARTITION_UPDATE, MessagingService.current_version,
+                                Change.REFRESH_EVENT, partition));
                     }
                     ufp.close();
                 }

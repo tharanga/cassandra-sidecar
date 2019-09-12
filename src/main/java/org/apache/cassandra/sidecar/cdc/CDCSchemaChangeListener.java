@@ -34,7 +34,7 @@ public class CDCSchemaChangeListener implements SchemaChangeListener
         this.conf = config;
     }
 
-    // KeySpaces
+    // TODO : Add/modify/remove KeySpaces
     @Override
     public void onKeyspaceAdded(KeyspaceMetadata keyspace)
     {
@@ -69,6 +69,7 @@ public class CDCSchemaChangeListener implements SchemaChangeListener
             org.apache.cassandra.schema.KeyspaceMetadata updatedKeyspaceMetadata = keyspaceMetadata
                     .withSwapped(tables);
             Schema.instance.load(updatedKeyspaceMetadata);
+            // TODO : This conflicts with the server. Dumper shouldn't rely on the column store
             Schema.instance.getKeyspaceInstance(table.getKeyspace().getName())
                     .initCf(Schema.instance.getTableMetadataRef(TableId.fromUUID(table.getId())), true);
         }

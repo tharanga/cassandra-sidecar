@@ -7,6 +7,7 @@ import org.apache.cassandra.db.partitions.PartitionUpdate;
 import org.apache.cassandra.db.rows.Row;
 import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.transform.Filter;
+import org.apache.cassandra.sidecar.cdc.Change;
 import org.apache.cassandra.utils.FBUtilities;
 
 
@@ -19,8 +20,14 @@ public class ConsoleOutput implements Output
     private static final Logger logger = LoggerFactory.getLogger(ConsoleOutput.class);
 
     @Override
-    public void emitPartition(PartitionUpdate partition) throws Exception
+    public void emitChange(Change change)  throws Exception
     {
+        if (change == null || change.getPartitionUpdateObject() == null)
+        {
+            return;
+        }
+        Change change1 = new Change(change.toBytes());
+        PartitionUpdate partition = change1.getPartitionUpdateObject();
         logger.info("Handling a partition with the column family : {}", partition.metadata().name);
         String pkStr = partition.metadata().partitionKeyType.getSerializer()
                 .toCQLLiteral(partition.partitionKey().getKey());

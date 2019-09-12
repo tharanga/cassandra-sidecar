@@ -4,19 +4,16 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-
 import org.apache.cassandra.db.Mutation;
 import org.apache.cassandra.db.commitlog.CommitLogDescriptor;
 import org.apache.cassandra.db.commitlog.CommitLogReadHandler;
 import org.apache.cassandra.db.partitions.PartitionUpdate;
+import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.cdc.output.Output;
 import org.apache.cassandra.sidecar.cdc.output.OutputFactory;
-
 /**
  * Implements Cassandra CommitLogReadHandler, dandles mutations read from Cassandra commit logs.
  */
@@ -91,7 +88,8 @@ public class MutationHandler implements CommitLogReadHandler
                 {
                     while (retry)
                     {
-                        output.emitPartition(partitionUpdate);
+                        output.emitChange(new Change(PayloadType.PARTITION_UPDATE, MessagingService.current_version,
+                                Change.CHANGE_EVENT, partitionUpdate));
                         retry = false;
                     }
                 }
