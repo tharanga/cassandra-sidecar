@@ -4,15 +4,11 @@ package org.apache.cassandra.sidecar.cdc.output;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.Future;
-
 import com.google.common.collect.Maps;
-
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.cassandra.db.partitions.PartitionUpdate;
 import org.apache.cassandra.sidecar.Configuration;
+import org.apache.cassandra.sidecar.cdc.Change;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -20,6 +16,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.ByteBufferSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
+
 
 
 /**
@@ -44,7 +41,7 @@ public class KafkaOutput implements Output
     }
 
     @Override
-    public void emitPartition(PartitionUpdate partition) throws Exception
+    public void emitChange(Change change) throws Exception
     {
         //if (producer == null || partition == null || partition.metadata().cfName.equals(config.getColumnFamily())){
         if (producer == null)
@@ -52,20 +49,16 @@ public class KafkaOutput implements Output
             throw new Exception("Kafka output is not properly configured");
         }
 
-        if (partition == null)
+        if (change == null)
         {
             return;
         }
-
-        logger.debug("Started handling a partition with the column family : {}", partition.metadata().name);
         try
         {
-            //String partitionKey = partition.metadata().getKeyValidator().getString(partition.partitionKey().getKey());
-            String partitionKey = partition.metadata().partitionKeyType.getSerializer()
-                    .toCQLLiteral(partition.partitionKey().getKey());
+            String partitionKey = change.getPartitionKey();
             logger.debug("Producing a partition update with the key : {}",  partitionKey);
             ProducerRecord<String, ByteBuffer> record = new ProducerRecord<>(conf.getKafkaTopic(), partitionKey,
-                    PartitionUpdate.toBytes(partition, 1));
+                    ByteBuffer.wrap(change.toBytes()));
             if (future != null)
             {
                 future.get();
