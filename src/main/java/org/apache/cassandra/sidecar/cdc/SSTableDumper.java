@@ -11,7 +11,7 @@ import org.apache.cassandra.db.partitions.PartitionUpdate;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterator;
 import org.apache.cassandra.io.sstable.format.SSTableReader;
 import org.apache.cassandra.net.MessagingService;
-import org.apache.cassandra.schema.Schema;
+import org.apache.cassandra.config.Schema;
 import org.apache.cassandra.sidecar.Configuration;
 import org.apache.cassandra.sidecar.cdc.output.Output;
 import org.apache.cassandra.sidecar.cdc.output.OutputFactory;
@@ -44,7 +44,7 @@ public class SSTableDumper
             logger.error("Output producer is not properly initiated");
             return;
         }
-        if (Schema.instance.getTableMetadata(keySpace, columnFamily) == null)
+        if (Schema.instance.getCFMetaData(keySpace, columnFamily) == null)
         {
             logger.error("Unknown keySpace/columnFamily {}.{}. No data to dump", keySpace, columnFamily);
             return;
@@ -63,7 +63,7 @@ public class SSTableDumper
             cfs = ks.getColumnFamilyStore(columnFamily);
             // TODO: Flush before dump.
             ColumnFamilyStore.loadNewSSTables(keySpace, columnFamily);
-            Set<SSTableReader> ssTables = cfs.snapshot(snapshotName, true);
+            Set<SSTableReader> ssTables = cfs.snapshotWithoutFlush(snapshotName, null,  true);
 
             for (SSTableReader reader : ssTables)
             {

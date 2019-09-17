@@ -28,9 +28,9 @@ public class ConsoleOutput implements Output
         }
         Change change1 = new Change(change.toBytes());
         PartitionUpdate partition = change1.getPartitionUpdateObject();
-        logger.info("Handling a partition with the column family : {}", partition.metadata().name);
-        String pkStr = partition.metadata().partitionKeyType.getSerializer()
-                .toCQLLiteral(partition.partitionKey().getKey());
+        logger.info("Handling a partition with the column family : {}", partition.metadata().cfName);
+        String pkStr = partition.metadata().getKeyValidator()
+                .getString(partition.partitionKey().getKey());
         logger.info("> Partition Key : {}", pkStr);
 
         if (partition.staticRow().columns().size() > 0)

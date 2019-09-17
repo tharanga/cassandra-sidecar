@@ -90,8 +90,8 @@ public class Change
         assert ((int) this.payloadVersion) == version;
         this.flags = flags;
         this.payload = PartitionUpdate.toBytes(partitionUpdate, this.payloadVersion).array();
-        this.partitionKey = partitionUpdate.metadata().partitionKeyType.getSerializer()
-                .toCQLLiteral(partitionUpdate.partitionKey().getKey());
+        this.partitionKey = partitionUpdate.metadata().getKeyValidator()
+                .getString(partitionUpdate.partitionKey().getKey());
     }
 
     public Change(byte[] serializedChange)
@@ -126,7 +126,7 @@ public class Change
             throw new Exception(String.format("Invalid payloadType (%d), expected (%d)", this.payloadType,
                     PayloadType.PARTITION_UPDATE.getValue()));
         }
-        return PartitionUpdate.fromBytes(ByteBuffer.wrap(this.payload), (int) this.payloadVersion);
+        return PartitionUpdate.fromBytes(ByteBuffer.wrap(this.payload), (int) this.payloadVersion, null);
     }
 
     public String getPartitionKey()

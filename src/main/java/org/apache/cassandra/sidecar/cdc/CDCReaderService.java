@@ -13,8 +13,8 @@ import io.vertx.core.logging.LoggerFactory;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.schema.KeyspaceMetadata;
-import org.apache.cassandra.schema.Schema;
-import org.apache.cassandra.schema.TableMetadata;
+import org.apache.cassandra.config.Schema;
+import org.apache.cassandra.config.CFMetaData;
 import org.apache.cassandra.sidecar.CQLSession;
 import org.apache.cassandra.sidecar.Configuration;
 
@@ -55,9 +55,9 @@ public class CDCReaderService implements Host.StateListener
 
             System.setProperty("cassandra.config", conf.getCassandraConfigPath());
 
-            if (!DatabaseDescriptor.isToolInitialized())
+            if (!DatabaseDescriptor.isDaemonInitialized())
             {
-                DatabaseDescriptor.toolInitialization();
+                DatabaseDescriptor.forceStaticInitialization();
                 Schema.instance.loadFromDisk(false);
             }
 
@@ -75,18 +75,18 @@ public class CDCReaderService implements Host.StateListener
             // Take a snapshot from existing CDC enabled tables.
             for (String keySpace : Schema.instance.getKeyspaces())
             {
-                KeyspaceMetadata keyspaceMetadata = Schema.instance.getKeyspaceMetadata(keySpace);
+                KeyspaceMetadata keyspaceMetadata = Schema.instance.getKSMetaData(keySpace);
                 if (keyspaceMetadata == null)
                 {
                     return;
                 }
-                for (TableMetadata tableMetadata : keyspaceMetadata.tablesAndViews())
+                for (CFMetaData tableMetadata : keyspaceMetadata.tablesAndViews())
                 {
                     if (!tableMetadata.params.cdc)
                     {
                         continue;
                     }
-                    this.ssTableDumper = new SSTableDumper(this.conf, tableMetadata.keyspace, tableMetadata.name);
+                    this.ssTableDumper = new SSTableDumper(this.conf, tableMetadata.ksName, tableMetadata.cfName);
                     ssTableDumper.dump();
                 }
             }

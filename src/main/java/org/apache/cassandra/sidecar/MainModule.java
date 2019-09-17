@@ -48,6 +48,12 @@ public class MainModule extends AbstractModule
 {
     private static final Logger logger = LoggerFactory.getLogger(MainModule.class);
 
+    @Override
+    protected void  configure()
+    {
+
+    }
+
     @Provides
     @Singleton
     public Vertx getVertx()

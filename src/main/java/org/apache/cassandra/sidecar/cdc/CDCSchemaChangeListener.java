@@ -13,9 +13,9 @@ import com.datastax.driver.core.UserType;
 import com.google.inject.Inject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.apache.cassandra.cql3.statements.schema.CreateTableStatement;
-import org.apache.cassandra.schema.Schema;
-import org.apache.cassandra.schema.TableId;
+import org.apache.cassandra.config.CFMetaData;
+import org.apache.cassandra.config.Schema;
+import org.apache.cassandra.cql3.statements.CreateTableStatement;
 import org.apache.cassandra.schema.Tables;
 import org.apache.cassandra.sidecar.Configuration;
 
@@ -57,73 +57,73 @@ public class CDCSchemaChangeListener implements SchemaChangeListener
     @Override
     public void onTableAdded(TableMetadata table)
     {
-        try
-        {
-            org.apache.cassandra.schema.KeyspaceMetadata keyspaceMetadata = Schema.instance
-                    .getKeyspaceMetadata(table.getKeyspace().getName());
-            org.apache.cassandra.schema.TableMetadata newTable = CreateTableStatement.parse(table.asCQLQuery(),
-                            table.getKeyspace().getName())
-                    .build(TableId.fromUUID(table.getId()));
-            Tables tables = keyspaceMetadata.tables
-                    .with(newTable);
-            org.apache.cassandra.schema.KeyspaceMetadata updatedKeyspaceMetadata = keyspaceMetadata
-                    .withSwapped(tables);
-            Schema.instance.load(updatedKeyspaceMetadata);
-            // TODO : This conflicts with the server. Dumper shouldn't rely on the column store
-            Schema.instance.getKeyspaceInstance(table.getKeyspace().getName())
-                    .initCf(Schema.instance.getTableMetadataRef(TableId.fromUUID(table.getId())), true);
-        }
-        catch (Exception ex)
-        {
-            logger.error("Failed to update metadata on onTableAdded : {}", ex.getMessage());
-        }
+//        try
+//        {
+//            org.apache.cassandra.schema.KeyspaceMetadata keyspaceMetadata = Schema.instance
+//                    .getKSMetaData(table.getKeyspace().getName());
+//            CFMetaData newTable = CreateTableStatement.parse(table.asCQLQuery(),
+//                            table.getKeyspace().getName())
+//                    .build(TableId.fromUUID(table.getId()));
+//            Tables tables = keyspaceMetadata.tables
+//                    .with(newTable);
+//            org.apache.cassandra.schema.KeyspaceMetadata updatedKeyspaceMetadata = keyspaceMetadata
+//                    .withSwapped(tables);
+//            Schema.instance.load(updatedKeyspaceMetadata);
+//            // TODO : This conflicts with the server. Dumper shouldn't rely on the column store
+//            Schema.instance.getKeyspaceInstance(table.getKeyspace().getName())
+//                    .initCf(Schema.instance.getTableMetadataRef(TableId.fromUUID(table.getId())), true);
+//        }
+//        catch (Exception ex)
+//        {
+//            logger.error("Failed to update metadata on onTableAdded : {}", ex.getMessage());
+//        }
     }
 
     @Override
     public void onTableRemoved(TableMetadata table)
     {
-        try
-        {
-            org.apache.cassandra.schema.KeyspaceMetadata keyspaceMetadata = Schema.instance
-                    .getKeyspaceMetadata(table.getKeyspace().getName());
-            Tables tables = keyspaceMetadata.tables
-                    .without(table.getName());
-            org.apache.cassandra.schema.KeyspaceMetadata updatedKeyspaceMetadata = keyspaceMetadata
-                    .withSwapped(tables);
-            Schema.instance.load(updatedKeyspaceMetadata);
-        }
-        catch (Exception ex)
-        {
-            logger.error("Failed to update metadata on onTableRemoved : {}", ex.getMessage());
-        }
+//        try
+//        {
+//            org.apache.cassandra.schema.KeyspaceMetadata keyspaceMetadata = Schema.instance
+//                    .getKSMetaData(table.getKeyspace().getName());
+//            Tables tables = keyspaceMetadata.tables
+//                    .without(table.getName());
+//            org.apache.cassandra.schema.KeyspaceMetadata updatedKeyspaceMetadata = keyspaceMetadata
+//                    .withSwapped(tables);
+//            Schema.instance.load(updatedKeyspaceMetadata);
+//        }
+//        catch (Exception ex)
+//        {
+//            logger.error("Failed to update metadata on onTableRemoved : {}", ex.getMessage());
+//        }
     }
 
     @Override
     public void onTableChanged(TableMetadata current, TableMetadata previous)
     {
-        try
-        {
-            org.apache.cassandra.schema.KeyspaceMetadata keyspaceMetadata = Schema.instance
-                            .getKeyspaceMetadata(current.getKeyspace().getName());
-            Tables tables = keyspaceMetadata.tables.without(current.getName())
-                            .with(CreateTableStatement.parse(current.asCQLQuery(), current.getKeyspace().getName())
-                            .build(TableId.fromUUID(current.getId())));
-            org.apache.cassandra.schema.KeyspaceMetadata updatedKeyspaceMetadata  = keyspaceMetadata
-                            .withSwapped(tables);
-            Schema.instance.load(updatedKeyspaceMetadata);
-        }
-        catch (Exception ex)
-        {
-            logger.error("Failed to update metadata onTableChanged : {}", ex.getMessage());
-        }
-
-        if (current.getOptions().isCDC() && !previous.getOptions().isCDC())
-        {
-            // TODO: Do this asynchronously using a SSTableDumper pool
-            SSTableDumper ssTableDumper = new SSTableDumper(this.conf, current.getKeyspace().getName(),
-                    current.getName());
-            ssTableDumper.dump();
-        }
+//        try
+//        {
+//            org.apache.cassandra.schema.KeyspaceMetadata keyspaceMetadata = Schema.instance
+//                            .getKSMetaData(current.getKeyspace().getName());
+//            Tables tables = keyspaceMetadata.tables.without(current.getName())
+//                            .with(CreateTableStatement.parse(current.asCQLQuery(), current.getKeyspace().getName())
+//                            .build(TableId.fromUUID(current.getId())));
+//            org.apache.cassandra.schema.KeyspaceMetadata updatedKeyspaceMetadata  = keyspaceMetadata
+//                            .withSwapped(tables);
+//            Schema.instance.load(updatedKeyspaceMetadata);
+//        }
+//        catch (Exception ex)
+//        {
+//            logger.error("Failed to update metadata onTableChanged : {}", ex.getMessage());
+//        }
+//
+//        if (current.getOptions().isCDC() && !previous.getOptions().isCDC())
+//        {
+//            // TODO: Do this asynchronously using a SSTableDumper pool
+//            SSTableDumper ssTableDumper = new SSTableDumper(this.conf, current.getKeyspace().getName(),
+//                    current.getName());
+//            ssTableDumper.dump();
+//        }
     }
 
     // Types
